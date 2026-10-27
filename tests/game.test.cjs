@@ -1,7 +1,8 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
-const el={innerHTML:'',textContent:'',classList:{add(){},remove(){}},addEventListener(){},querySelector(){return el},append(){},focus(){},remove(){},getBoundingClientRect(){return {width:1000,height:700}}};
-const sandbox={console,document:{querySelector(){return el},addEventListener(){},createElement(){return {...el}}},window:{addEventListener(){}},localStorage:{data:{},setItem(k,v){this.data[k]=v},getItem(k){return this.data[k]}},setTimeout(fn){sandbox.pending.push(fn);return 1},clearTimeout(){},setInterval(){},clearInterval(){},requestAnimationFrame(){},pending:[],URL,Blob};
-vm.createContext(sandbox);const src=fs.readFileSync('dist/game.js','utf8').replace('title();requestAnimationFrame(loop);','');vm.runInContext(src,sandbox);
+const el={innerHTML:'',textContent:'',classList:{add(){},remove(){},toggle(){}},addEventListener(){},querySelector(){return el},append(){},focus(){},remove(){},getBoundingClientRect(){return {width:1000,height:700}}};
+const listeners={},mediaState={matches:false,addEventListener(){}};let timerId=0;
+const sandbox={console,listeners,mediaState,intervals:new Map(),document:{querySelector(){return el},addEventListener(name,fn){listeners[name]=fn},createElement(){return {...el}}},window:{matchMedia(){return mediaState},addEventListener(name,fn){listeners[name]=fn}},localStorage:{data:{},setItem(k,v){this.data[k]=v},getItem(k){return this.data[k]}},setTimeout(fn){sandbox.pending.push(fn);return 1},clearTimeout(){},setInterval(fn){const id=++timerId;sandbox.intervals.set(id,fn);return id},clearInterval(id){sandbox.intervals.delete(id)},requestAnimationFrame(){},pending:[],URL,Blob};
+vm.createContext(sandbox);const src=fs.readFileSync('dist/game.js','utf8').replace('title();updateInputMode();requestAnimationFrame(loop);','');vm.runInContext(src,sandbox);
 vm.runInContext(`
 let checks=0;function ok(v,m){if(!v)throw Error(m);checks++}
 // Every landmark is reachable from the starting square without crossing water or trees.
@@ -56,7 +57,26 @@ fresh(5,1);state.level=5;state.ultimates={5:0,1:0};state.mp=stats().maxMp;startB
 fresh(5,0);state.level=5;state.ultimates={5:0};state.mp=99;startBattle('keeper');const startHp=stats().maxHp;state.hp=startHp;fight('ultimate','5');pending.splice(0).forEach(f=>f());ok(startHp-state.hp===Math.round((31-stats().def)*.5),'Fortification did not halve incoming damage');
 for(let i=0;i<3;i++){fight('guard');pending.splice(0).forEach(f=>f())}ok(battle.fortify===0,'Fortification did not expire after four enemy turns');battle=null;pending.length=0;
 fresh(1,5);state.level=4;ok(ultimateChoices().includes('Unlock at level 5'),'Locked choice UI absent');state.level=5;ok(ultimateChoices().includes('Choose Meteor Requiem'),'Unlocked choice UI absent');
-console.log(checks+' engine assertions passed; 16 ultimates verified; campaign completed.');
+
+// Mobile detection and held-pointer lifecycle. These exercise the real move function.
+fresh(0,1);screen='world';ok(!wantsTouchControls(),'Desktop incorrectly detected as touch');mediaState.matches=true;ok(wantsTouchControls(),'Phone media detection failed');
+const padButton={dataset:{move:'0,-1'},classList:{add(){},remove(){}},setPointerCapture(id){this.captured=id}};
+function pointer(id=1){return {pointerId:id,button:0,target:{closest(){return padButton}},preventDefault(){}}}
+startTouchMove(pointer());ok(state.y===23&&padButton.captured===1,'Tap did not move immediately or capture pointer');ok(intervals.size===1,'Hold timer missing');
+for(const tick of intervals.values())tick();ok(state.y===22,'Held button did not repeat movement');
+endTouchMove(pointer(2));ok(intervals.size===1,'Second finger incorrectly cancelled movement');
+endTouchMove(pointer());ok(intervals.size===0&&touchPointer===null,'Lifting finger did not stop movement');
+padButton.dataset.move='-1,-1';state.x=8;state.y=24;startTouchMove(pointer());ok(state.x===7&&state.y===23,'Diagonal touch movement failed');listeners.pointercancel(pointer());ok(intervals.size===0,'Pointer cancellation did not stop movement');
+state.x=8;state.y=24;startTouchMove(pointer());listeners.lostpointercapture(pointer());ok(intervals.size===0,'Losing pointer capture left movement running');
+state.x=8;state.y=24;startTouchMove(pointer());listeners.blur();ok(intervals.size===0,'App blur left movement running');
+state.x=8;state.y=24;startTouchMove(pointer());listeners.visibilitychange();ok(intervals.size===0,'Hiding app left movement running');
+state.x=8;state.y=24;startTouchMove(pointer());const owner=touchPointer;startTouchMove(pointer(2));ok(touchPointer===owner&&intervals.size===1,'Multitouch started a competing movement timer');stopTouchMove();
+modalStack=[elStub];const before=state.steps;startTouchMove(pointer());ok(intervals.size===0&&state.steps===before,'Movement occurred behind a menu');modalStack=[];
+startBattle('grove');startTouchMove(pointer());ok(intervals.size===0,'Movement started during combat');battle=null;
+state.x=8;state.y=24;startTouchMove(pointer());startBattle('grove');ok(intervals.size===0,'Entering combat left movement running');battle=null;
+ok((mobileControls().match(/data-move=/g)||[]).length===8,'Eight-direction pad missing');
+console.log(checks+' engine assertions passed; mobile controls and 16 ultimates verified; campaign completed.');
+
 
 
 `,Object.assign(sandbox,{elStub:el}));

@@ -10,7 +10,11 @@ A complete, self-contained browser RPG, built with HTML, CSS and Canvas. Open `d
 - E: interact with a nearby landmark
 - M: map
 - Esc: menu / back
-- Mouse / touch: all menus and an on-screen movement pad
+- Phone / touch screen: automatically shows a large eight-direction pad; tap to step or hold to walk
+- Touch Interact, Map, and Menu buttons sit next to the pad
+- Portrait and landscape layouts keep controls outside the map and health visible in battle
+- Lifting your finger, switching apps, or opening menus stops held movement
+- Mouse: all menus; keyboard movement remains available on desktop
 
 Choose any two of eight classes. Choosing one twice grants 30% stronger class skills. Recover three seals and defeat the Hourkeeper to finish the story. Explore four regions, open four caches, buy supplies, craft permanent gear, and discover seven enemies. Roads are safe, and the refuge offers unlimited free healing. Defeat preserves progression and returns you to the refuge with a small gold penalty.
 
