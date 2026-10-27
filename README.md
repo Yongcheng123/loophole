@@ -1,5 +1,7 @@
 # Loophole — The Fractured Hour
 
+**[Play in your browser](https://yongcheng123.github.io/loophole/)** — no installation or sign-in required.
+
 A complete, self-contained browser RPG, built with HTML, CSS and Canvas. Open `dist/index.html` in a modern browser, or serve `dist` with any static web server. No install or build is required. Fonts have local fallbacks; the game itself works offline.
 
 ## Play
@@ -38,3 +40,7 @@ With Node.js installed, run the engine tests from the repository root:
 node --check dist/game.js
 node tests/game.test.cjs
 ```
+
+## Hosting
+
+GitHub Pages publishes the `dist` directory. Changes to game files on `main` run the engine tests and deploy automatically through `.github/workflows/pages.yml`. Browser saves are specific to the site address; use Export/Import backup to transfer a save from another hosted copy.
